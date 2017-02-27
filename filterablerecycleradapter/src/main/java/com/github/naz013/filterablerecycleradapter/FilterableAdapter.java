@@ -6,9 +6,23 @@ import android.support.v7.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Simple filterable RecyclerView adapter implementation.
+ *
+ * @param <V>  Object used for adapter as model.
+ * @param <Q>  Object for models filtering (ex. String).
+ * @param <VH> ViewHolder for RecyclerView.Adapter.
+ */
 public abstract class FilterableAdapter<V, Q, VH extends RecyclerView.ViewHolder> extends RecyclerView.Adapter<VH> {
 
+    /**
+     * All data that you set to adapter.
+     */
     private List<V> originalData = new ArrayList<>();
+
+    /**
+     * Data that used for adapter after filtering process.
+     */
     private List<V> usedData = new ArrayList<>();
     private Filter<V, Q> filter;
     private FilterCallback<V, Q> filterCallback;
@@ -31,10 +45,14 @@ public abstract class FilterableAdapter<V, Q, VH extends RecyclerView.ViewHolder
     public void setData(List<V> data) {
         this.originalData = data;
         this.usedData = new ArrayList<>(data);
+        if (this.lastQuery != null) {
+            filter(this.lastQuery);
+        }
     }
 
     public void setFilter(Filter<V, Q> filter) {
         this.filter = filter;
+        this.lastQuery = null;
     }
 
     public void setFilterCallback(FilterCallback<V, Q> filterCallback) {
@@ -65,12 +83,6 @@ public abstract class FilterableAdapter<V, Q, VH extends RecyclerView.ViewHolder
         }
     }
 
-    private void addToList(V v) {
-        usedData.add(v);
-        notifyItemInserted(usedData.size() - 1);
-        notifyItemRangeChanged(0, usedData.size());
-    }
-
     public void addItem(int position, V v) {
         if (position >= originalData.size()) {
             addItem(v);
@@ -92,12 +104,6 @@ public abstract class FilterableAdapter<V, Q, VH extends RecyclerView.ViewHolder
             notifyItemInserted(position);
             notifyItemRangeChanged(0, originalData.size());
         }
-    }
-
-    private void addToList(int position, V v) {
-        usedData.add(position, v);
-        notifyItemInserted(position);
-        notifyItemRangeChanged(0, usedData.size());
     }
 
     public void filter(Q q) {
@@ -131,6 +137,18 @@ public abstract class FilterableAdapter<V, Q, VH extends RecyclerView.ViewHolder
         return originalData.size();
     }
 
+    private void addToList(V v) {
+        usedData.add(v);
+        notifyItemInserted(usedData.size() - 1);
+        notifyItemRangeChanged(0, usedData.size());
+    }
+
+    private void addToList(int position, V v) {
+        usedData.add(position, v);
+        notifyItemInserted(position);
+        notifyItemRangeChanged(0, usedData.size());
+    }
+
     private List<V> getFiltered(Q query) {
         if (query == null) return originalData;
         List<V> list = new ArrayList<>();
@@ -142,18 +160,18 @@ public abstract class FilterableAdapter<V, Q, VH extends RecyclerView.ViewHolder
         return list;
     }
 
-    private V remove(int position) {
+    protected V remove(int position) {
         V model = usedData.remove(position);
         notifyItemRemoved(position);
         return model;
     }
 
-    private void add(int position, V model) {
+    protected void add(int position, V model) {
         usedData.add(position, model);
         notifyItemInserted(position);
     }
 
-    private void moveItem(int fromPosition, int toPosition) {
+    protected void move(int fromPosition, int toPosition) {
         System.out.println("from " + fromPosition + ", to " + toPosition);
         V model = usedData.remove(fromPosition);
         usedData.add(toPosition, model);
@@ -166,7 +184,7 @@ public abstract class FilterableAdapter<V, Q, VH extends RecyclerView.ViewHolder
         applyAndAnimateMovedItems(models);
     }
 
-    private void applyAndAnimateRemovals(List<V> newModels) {
+    protected void applyAndAnimateRemovals(List<V> newModels) {
         for (int i = usedData.size() - 1; i >= 0; i--) {
             V model = usedData.get(i);
             if (!newModels.contains(model)) {
@@ -175,7 +193,7 @@ public abstract class FilterableAdapter<V, Q, VH extends RecyclerView.ViewHolder
         }
     }
 
-    private void applyAndAnimateAdditions(List<V> newModels) {
+    protected void applyAndAnimateAdditions(List<V> newModels) {
         for (int i = 0, count = newModels.size(); i < count; i++) {
             V model = newModels.get(i);
             if (!usedData.contains(model)) {
@@ -184,12 +202,12 @@ public abstract class FilterableAdapter<V, Q, VH extends RecyclerView.ViewHolder
         }
     }
 
-    private void applyAndAnimateMovedItems(List<V> newModels) {
+    protected void applyAndAnimateMovedItems(List<V> newModels) {
         for (int toPosition = newModels.size() - 1; toPosition >= 0; toPosition--) {
             V model = newModels.get(toPosition);
             final int fromPosition = usedData.indexOf(model);
             if (fromPosition >= 0 && fromPosition != toPosition) {
-                moveItem(fromPosition, toPosition);
+                move(fromPosition, toPosition);
             }
         }
     }
